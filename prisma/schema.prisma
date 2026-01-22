@@ -4,7 +4,12 @@ generator client {
 
 datasource db {
   provider = "mongodb"
+  url      = env("DATABASE_URL")
 }
+
+// ============================================
+// Authentication Models (Existing)
+// ============================================
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
@@ -39,17 +44,21 @@ model Session {
 model User {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   
-  // required field of the user model
-  email         String  @unique
+  name          String
+  email         String    @unique
   password      String
-
-  // optional fields
-  name          String?
   image         String?
+  role          String?   @default("teacher")
   
-  // relations
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
   accounts      Account[]
   sessions      Session[]
+  students      Student[]
+  courses       Course[]
+  batches       Batch[]
 }
 
 model VerificationToken {
@@ -60,4 +69,200 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ============================================
+// Student Management Models
+// ============================================
+
+model Batch {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  batchName     String
+  batchYear     String?
+  teacherId     String   @db.ObjectId
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  teacher       User            @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  students      Student[]
+  routines      Routine[]
+  
+  @@index([teacherId])
+}
+
+model Student {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  studentId        String   
+  name             String
+  institutionName  String
+  class            String
+  gender           String
+  avatar           String?
+  email            String?
+  phone            String?
+  address          String?
+  dateOfBirth      DateTime?
+  guardianName     String?
+  guardianPhone    String?
+  
+  batchId          String   @db.ObjectId
+  teacherId        String   @db.ObjectId
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  batch            Batch                 @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  teacher          User                  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  courseSubscriptions CourseSubscription[]
+  attendances      Attendance[]
+  results          Result[]
+  feedbacks        Feedback[]
+  
+  @@index([teacherId])
+  @@index([batchId])
+  @@index([studentId])
+}
+
+model Course {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  title             String
+  description       String?
+  courseFee         Float
+  courseDuration    Int      // Duration in months
+  courseFor         String   // e.g., "Class 9", "Class 10", "SSC", "HSC"
+  isActive          Boolean  @default(true)
+  
+  teacherId         String   @db.ObjectId
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  teacher           User                 @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  subscriptions     CourseSubscription[]
+  routines          Routine[]
+  results           Result[]
+  
+  @@index([teacherId])
+}
+
+model CourseSubscription {
+  id                   String    @id @default(auto()) @map("_id") @db.ObjectId
+  
+  studentId            String    @db.ObjectId
+  courseId             String    @db.ObjectId
+  
+  enrolledDate         DateTime  @default(now())
+  validTill            DateTime
+  isActive             Boolean   @default(true)
+  paymentStatus        String    @default("pending") // pending, paid, partial
+  amountPaid           Float     @default(0)
+  
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  
+  // Relations
+  student              Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course               Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([studentId, courseId])
+  @@index([studentId])
+  @@index([courseId])
+}
+
+model Routine {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  courseId    String   @db.ObjectId
+  batchId     String   @db.ObjectId
+  
+  // Multiple days and times support
+  schedule    RoutineSchedule[]
+  
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  batch       Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  
+  @@index([courseId])
+  @@index([batchId])
+}
+
+// Embedded type for routine schedule
+type RoutineSchedule {
+  day         String   // Monday, Tuesday, etc.
+  startTime   String   // e.g., "09:00 AM"
+  endTime     String   // e.g., "10:30 AM"
+}
+
+model Attendance {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  studentId   String   @db.ObjectId
+  date        DateTime
+  status      String   // present, absent, late, excused
+  remarks     String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@unique([studentId, date])
+  @@index([studentId])
+  @@index([date])
+}
+
+model Result {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  studentId       String   @db.ObjectId
+  courseId        String   @db.ObjectId
+  
+  examDate        DateTime
+  examTerm        String   // 1st, 2nd, 3rd, Midterm, Final, etc.
+  examName        String?  // Optional exam name
+  marksObtained   Float
+  totalMarks      Float
+  grade           String?
+  remarks         String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  student         Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
+  @@index([courseId])
+  @@index([examDate])
+}
+
+model Feedback {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  studentId   String   @db.ObjectId
+  feedback    String
+  rating      Int?     // Optional: 1-5 rating
+  feedbackDate DateTime @default(now())
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  @@index([studentId])
 }
