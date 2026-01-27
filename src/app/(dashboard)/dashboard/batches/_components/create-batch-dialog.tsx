@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/axios-instance";
+import { Batch } from "@prisma/client";
 
 const batchFormSchema = z.object({
   batchName: z
@@ -38,8 +39,21 @@ const batchFormSchema = z.object({
 
 type BatchFormValues = z.infer<typeof batchFormSchema>;
 
-export function CreateBatchDialog({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
+interface Props {
+  children?: React.ReactNode;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  mode?: "create" | "edit";
+  batch?: Batch;
+}
+
+export function CreateBatchDialog({
+  children,
+  open,
+  setOpen,
+  mode = "create",
+  batch,
+}: Props) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -51,19 +65,26 @@ export function CreateBatchDialog({ children }: { children: React.ReactNode }) {
     },
   });
 
+  useEffect(() => {
+    if (mode === "edit" && batch) {
+      form.reset({
+        batchName: batch.batchName || "",
+        batchYear: batch.batchYear || "",
+      });
+    }
+  }, [mode, batch, form]);
+
   async function onSubmit(data: BatchFormValues) {
     setLoading(true);
 
     try {
-      const response = await api.post("/batches", data);
-
-      if (!response.status.toString().startsWith("2")) {
-        throw new Error("Failed to create batch");
+      if (mode === "create") {
+        await api.post("/batches", data);
+        toast.success("Batch created successfully!");
+      } else {
+        await api.patch(`/batches/${batch?.id}`, data);
+        toast.success("Batch updated successfully!");
       }
-
-      toast("Success!", {
-        description: response.statusText || "Batch created successfully",
-      });
 
       form.reset();
       setOpen(false);

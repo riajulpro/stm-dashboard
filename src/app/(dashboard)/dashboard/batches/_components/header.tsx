@@ -3,8 +3,11 @@
 import { Button } from "@/components/ui/button";
 import { CreateBatchDialog } from "./create-batch-dialog";
 import { Plus } from "lucide-react";
+import { useState } from "react";
 
 const BatchesHeader = () => {
+  const [open, setOpen] = useState(false);
+
   return (
     <div className="flex items-center justify-between">
       <div className="space-y-1">
@@ -13,7 +16,7 @@ const BatchesHeader = () => {
           Create and manage your student batches
         </p>
       </div>
-      <CreateBatchDialog>
+      <CreateBatchDialog open={open} setOpen={setOpen}>
         <Button size="lg" className="gap-2">
           <Plus className="h-5 w-5" />
           Create Batch
