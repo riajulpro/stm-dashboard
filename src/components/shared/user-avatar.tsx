@@ -22,8 +22,11 @@ export function UserAvatar() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Avatar>
-            <AvatarImage src="https://github.com/shadcn.png" alt="shadcn" />
-            <AvatarFallback>CN</AvatarFallback>
+            <AvatarImage src={session?.data?.user?.image || ""} alt="shadcn" />
+
+            <AvatarFallback className="bg-green-400">
+              {session?.data?.user?.name?.charAt(0)}
+            </AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>

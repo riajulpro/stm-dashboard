@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,25 +8,42 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { Button } from "@/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { api } from "@/lib/axios-instance";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children?: React.ReactNode;
   mode?: "edit" | "create";
+  courses: { id: string; title: string }[];
+  students: { id: string; name: string }[];
 }
 
 const zodSchema = z.object({
@@ -36,8 +52,16 @@ const zodSchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
 });
 
-function SubscriptionDialog({ open, onOpenChange, children, mode }: Props) {
+function SubscriptionDialog({
+  open,
+  onOpenChange,
+  children,
+  mode,
+  courses,
+  students,
+}: Props) {
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const form = useForm({
     resolver: zodResolver(zodSchema),
@@ -51,7 +75,12 @@ function SubscriptionDialog({ open, onOpenChange, children, mode }: Props) {
     setLoading(true);
     try {
       // Handle form submission logic here
-      console.log(data);
+      await api.post("/subscriptions", data);
+      toast.success("Subscription added successfully");
+
+      onOpenChange(false);
+      form.reset();
+      router.refresh();
     } catch (error) {
       console.error(error);
     } finally {
@@ -87,10 +116,31 @@ function SubscriptionDialog({ open, onOpenChange, children, mode }: Props) {
               name="courseId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Course ID</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <FormLabel>Course*</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={loading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select course" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {mode === "create"
+                      ? "Select the batch to which the student will be added"
+                      : "Student's batch cannot be changed"}
+                  </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -99,10 +149,31 @@ function SubscriptionDialog({ open, onOpenChange, children, mode }: Props) {
               name="studentId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Student ID</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
+                  <FormLabel>Student*</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    disabled={loading}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select student" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {students.map((student) => (
+                        <SelectItem key={student.id} value={student.id}>
+                          {student.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    {mode === "create"
+                      ? "Select the student for subscription"
+                      : "Student's subscription cannot be changed"}
+                  </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />

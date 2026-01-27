@@ -2,18 +2,55 @@ import { Suspense } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import CreateSubscriptionButton from "./_components/create-subscription-button";
 
-// import { DataTable } from "@/components/shared/data-table";
-
 import { db } from "@/lib/prisma";
-// import { subscriptionColumns } from "@/data-columns/subscription/subscription";
+import { auth } from "@/lib/auth";
+import { subscriptionColumns } from "@/data-columns/subscription/subscription";
+import { DataTable } from "@/components/shared/data-table";
 
-export default async function SubscriptionPage() {
-  const subscription = await db.courseSubscription.findMany({
+async function getSubscriptions(teacherId: string) {
+  return await await db.courseSubscription.findMany({
+    where: {
+      course: {
+        teacherId,
+      },
+    },
     include: {
       student: true,
       course: true,
     },
   });
+}
+
+async function getCourses(teacherId: string) {
+  return await db.course.findMany({
+    where: {
+      teacherId: teacherId,
+    },
+    select: {
+      id: true,
+      title: true,
+    },
+  });
+}
+
+async function getStudents() {
+  return await db.student.findMany({
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+}
+
+export default async function SubscriptionPage() {
+  const session = await auth();
+  const teacherId = session?.user?.id;
+
+  const [subscription, courses, students] = await Promise.all([
+    getSubscriptions(teacherId!),
+    getCourses(teacherId!),
+    getStudents(),
+  ]);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
@@ -26,12 +63,12 @@ export default async function SubscriptionPage() {
               Manage your subscriptions and their information
             </p>
           </div>
-          <CreateSubscriptionButton />
+          <CreateSubscriptionButton courses={courses} students={students} />
         </div>
 
         {/* Students Table */}
         <Suspense fallback={<Spinner />}>
-          {/* <DataTable columns={subscriptionColumns} data={subscription} /> */}
+          <DataTable columns={subscriptionColumns} data={subscription} />
         </Suspense>
       </div>
     </div>
