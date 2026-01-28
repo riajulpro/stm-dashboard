@@ -3,7 +3,7 @@ export interface ISubscription {
   enrolledDate: Date;
   validTill: Date;
   isActive: boolean;
-  paymentStatus: "paid" | "pending" | "failed";
+  paymentStatus: string;
   amountPaid: number;
 
   student: {

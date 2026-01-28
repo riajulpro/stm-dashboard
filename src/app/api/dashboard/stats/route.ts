@@ -361,13 +361,13 @@ export async function GET() {
             id: string;
             student: { name: string };
             feedback: string;
-            rating: number;
+            rating: number | null;
             feedbackDate: Date;
           }) => ({
             id: feedback.id,
             studentName: feedback.student.name,
             feedback: feedback.feedback,
-            rating: feedback.rating,
+            rating: feedback.rating || 0,
             date: feedback.feedbackDate,
           }),
         ),
@@ -377,12 +377,14 @@ export async function GET() {
           id: string;
           course: { title: string };
           batch: { batchName: string };
-          schedule: string;
+          schedule: { day: string; startTime: string; endTime: string }[];
         }) => ({
           id: routine.id,
           courseName: routine.course.title,
           batchName: routine.batch.batchName,
-          schedule: routine.schedule,
+          schedule: routine.schedule
+            .map((s) => `${s.day} ${s.startTime}-${s.endTime}`)
+            .join(", "),
         }),
       ),
     };
