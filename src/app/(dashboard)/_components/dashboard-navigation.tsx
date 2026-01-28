@@ -49,10 +49,10 @@ const DashboardNavigation = () => {
             variant="ghost"
             className={cn(
               "w-full flex justify-start",
-              isActive(path) && "bg-slate-200",
+              isActive(path) && "bg-slate-200 text-sky-700 font-semibold",
             )}
           >
-            <Icon /> {name}
+            <Icon size={22} /> {name}
           </Button>
         </Link>
       ))}

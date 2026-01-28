@@ -79,7 +79,7 @@ export default function DashboardStatistics({ stats }: Props) {
   const hasUpcomingClasses = stats.upcomingClasses.length > 0;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-3 md:p-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
@@ -156,7 +156,7 @@ export default function DashboardStatistics({ stats }: Props) {
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="w-full overflow-x-auto grid gap-4 md:grid-cols-2">
         {/* Monthly Revenue Chart */}
         <Card>
           <CardHeader>
@@ -173,9 +173,9 @@ export default function DashboardStatistics({ stats }: Props) {
                   color: "hsl(var(--chart-1))",
                 },
               }}
-              className="h-75"
+              className="min-h-55 w-full aspect-4/3 md:aspect-5/3 md:min-h-75"
             >
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="99%" height="100%">
                 <LineChart data={stats.charts.monthlyRevenue}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
@@ -209,9 +209,9 @@ export default function DashboardStatistics({ stats }: Props) {
                   color: "hsl(var(--chart-2))",
                 },
               }}
-              className="h-75"
+              className="min-h-55 w-full aspect-4/3 md:aspect-5/3 md:min-h-75"
             >
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="99%" height="100%">
                 <BarChart data={stats.charts.studentGrowth}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
@@ -244,9 +244,9 @@ export default function DashboardStatistics({ stats }: Props) {
                     color: "hsl(var(--chart-1))",
                   },
                 }}
-                className="h-75"
+                className="h-04 w-full md:h-80"
               >
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="99%" height="100%">
                   <BarChart
                     data={stats.charts.courseEnrollments}
                     layout="vertical"
@@ -288,9 +288,9 @@ export default function DashboardStatistics({ stats }: Props) {
                     color: "hsl(var(--chart-1))",
                   },
                 }}
-                className="h-75"
+                className="min-h-55 w-full aspect-4/3 md:aspect-5/3 md:min-h-75"
               >
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="99%" height="100%">
                   <PieChart>
                     <Pie
                       data={stats.charts.attendanceStats}
@@ -327,9 +327,21 @@ export default function DashboardStatistics({ stats }: Props) {
       <TooltipProvider>
         <Tabs defaultValue="recent-students" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="recent-students">Recent Students</TabsTrigger>
-            <TabsTrigger value="top-performers">Top Performers</TabsTrigger>
-            <TabsTrigger value="feedbacks">Recent Feedback</TabsTrigger>
+            <TabsTrigger
+              value="recent-students"
+              className="text-xs md:text-base"
+            >
+              Recent Students
+            </TabsTrigger>
+            <TabsTrigger
+              value="top-performers"
+              className="text-xs md:text-base"
+            >
+              Top Performers
+            </TabsTrigger>
+            <TabsTrigger value="feedbacks" className="text-xs md:text-base">
+              Recent Feedback
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="recent-students">
