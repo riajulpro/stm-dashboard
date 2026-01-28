@@ -2,6 +2,30 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/prisma";
 import { processMonthlyData, processMonthlyGrowth } from "./statistics-helper";
 
+export const demoDashboardStats = {
+  overview: {
+    totalStudents: 0,
+    totalBatches: 0,
+    totalCourses: 0,
+    activeCourses: 0,
+    totalRevenue: 0,
+    pendingPayments: 0,
+    attendanceRate: 0,
+  },
+  charts: {
+    monthlyRevenue: [],
+    studentGrowth: [],
+    courseEnrollments: [],
+    attendanceStats: [],
+  },
+  recentActivities: {
+    recentStudents: [],
+    topPerformers: [],
+    recentFeedbacks: [],
+  },
+  upcomingClasses: [],
+};
+
 export async function getDashbaordStats() {
   try {
     const session = await auth();
@@ -355,7 +379,7 @@ export async function getDashbaordStats() {
             id: string;
             student: { name: string };
             feedback: string;
-            rating: number;
+            rating: number | null;
             feedbackDate: Date;
           }) => ({
             id: feedback.id,
@@ -371,7 +395,7 @@ export async function getDashbaordStats() {
           id: string;
           course: { title: string };
           batch: { batchName: string };
-          schedule: string;
+          schedule: Array<{ day: string; startTime: string; endTime: string }>;
         }) => ({
           id: routine.id,
           courseName: routine.course.title,
@@ -384,6 +408,6 @@ export async function getDashbaordStats() {
     return stats;
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
-    return null;
+    return demoDashboardStats;
   }
 }

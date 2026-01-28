@@ -1,7 +1,6 @@
 "use client";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Tooltip } from "@/components/ui/tooltip";
 
 import {
   Card,
@@ -21,6 +20,10 @@ import {
   Calendar,
   Award,
   AlertCircle,
+  UserPlus,
+  Trophy,
+  MessageSquare,
+  CalendarX,
 } from "lucide-react";
 import {
   BarChart,
@@ -41,15 +44,15 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import { DashboardStats } from "@/types/dashboard-stats";
+import { DashboardData } from "@/types/dashboard-stats";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
-export default function DashboardStatistics({
-  stats,
-}: {
-  stats: DashboardStats | null;
-}) {
+interface Props {
+  stats: DashboardData;
+}
+
+export default function DashboardStatistics({ stats }: Props) {
   if (!stats) {
     return (
       <div className="flex items-center justify-center min-h-100">
@@ -69,6 +72,11 @@ export default function DashboardStatistics({
       </div>
     );
   }
+
+  const hasRecentStudents = stats.recentActivities.recentStudents.length > 0;
+  const hasTopPerformers = stats.recentActivities.topPerformers.length > 0;
+  const hasRecentFeedbacks = stats.recentActivities.recentFeedbacks.length > 0;
+  const hasUpcomingClasses = stats.upcomingClasses.length > 0;
 
   return (
     <div className="space-y-6 p-6">
@@ -228,33 +236,40 @@ export default function DashboardStatistics({
             <CardDescription>Active enrollments by course</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                enrollments: {
-                  label: "Enrollments",
-                  color: "hsl(var(--chart-1))",
-                },
-              }}
-              className="h-75"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={stats.charts.courseEnrollments}
-                  layout="vertical"
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="courseName" type="category" width={100} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Legend />
-                  <Bar
-                    dataKey="enrollments"
-                    fill="var(--color-enrollments)"
-                    name="Enrollments"
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {stats.charts.courseEnrollments.length > 0 ? (
+              <ChartContainer
+                config={{
+                  enrollments: {
+                    label: "Enrollments",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="h-75"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={stats.charts.courseEnrollments}
+                    layout="vertical"
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="courseName" type="category" width={100} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Legend />
+                    <Bar
+                      dataKey="enrollments"
+                      fill="var(--color-enrollments)"
+                      name="Enrollments"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-75 text-muted-foreground">
+                <BookOpen className="h-12 w-12 mb-2 opacity-50" />
+                <p className="text-sm">No course enrollments yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -265,38 +280,45 @@ export default function DashboardStatistics({
             <CardDescription>Last 30 days breakdown</CardDescription>
           </CardHeader>
           <CardContent>
-            <ChartContainer
-              config={{
-                count: {
-                  label: "Count",
-                  color: "hsl(var(--chart-1))",
-                },
-              }}
-              className="h-75"
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={stats.charts.attendanceStats}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ status, count }) => `${status}: ${count}`}
-                    outerRadius={100}
-                    fill="var(--color-count)"
-                    dataKey="count"
-                  >
-                    {stats.charts.attendanceStats.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </ChartContainer>
+            {stats.charts.attendanceStats.some((stat) => stat.count > 0) ? (
+              <ChartContainer
+                config={{
+                  count: {
+                    label: "Count",
+                    color: "hsl(var(--chart-1))",
+                  },
+                }}
+                className="h-75"
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.charts.attendanceStats}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ status, count }) => `${status}: ${count}`}
+                      outerRadius={100}
+                      fill="var(--color-count)"
+                      dataKey="count"
+                    >
+                      {stats.charts.attendanceStats.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-75 text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mb-2 opacity-50" />
+                <p className="text-sm">No attendance data yet</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -319,31 +341,43 @@ export default function DashboardStatistics({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {stats.recentActivities.recentStudents.map((student) => (
-                    <div key={student.id} className="flex items-center gap-4">
-                      <Avatar>
-                        <AvatarImage
-                          src={student.avatar || "/placeholder.svg"}
-                        />
-                        <AvatarFallback>
-                          {student.name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{student.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {student.batch}
-                        </p>
+                {hasRecentStudents ? (
+                  <div className="space-y-4">
+                    {stats.recentActivities.recentStudents.map((student) => (
+                      <div key={student.id} className="flex items-center gap-4">
+                        <Avatar>
+                          <AvatarImage
+                            src={student.avatar || "/placeholder.svg"}
+                          />
+                          <AvatarFallback>
+                            {student.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{student.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {student.batch}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(student.joinedDate).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(student.joinedDate).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <UserPlus className="h-16 w-16 mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-1">
+                      No recent students
+                    </h3>
+                    <p className="text-sm">
+                      New student enrollments will appear here
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -355,45 +389,59 @@ export default function DashboardStatistics({
                 <CardDescription>Based on average exam scores</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {stats.recentActivities.topPerformers.map(
-                    (student, index) => (
-                      <div
-                        key={student.studentId}
-                        className="flex items-center gap-4"
-                      >
-                        <div className="flex items-center gap-2">
-                          <Award
-                            className={`h-5 w-5 ${
-                              index === 0
-                                ? "text-yellow-500"
-                                : index === 1
-                                  ? "text-gray-400"
-                                  : index === 2
-                                    ? "text-amber-700"
-                                    : "text-muted-foreground"
-                            }`}
-                          />
-                          <Avatar>
-                            <AvatarImage
-                              src={student.avatar || "/placeholder.svg"}
+                {hasTopPerformers ? (
+                  <div className="space-y-4">
+                    {stats.recentActivities.topPerformers.map(
+                      (student, index) => (
+                        <div
+                          key={student.studentId}
+                          className="flex items-center gap-4"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Award
+                              className={`h-5 w-5 ${
+                                index === 0
+                                  ? "text-yellow-500"
+                                  : index === 1
+                                    ? "text-gray-400"
+                                    : index === 2
+                                      ? "text-amber-700"
+                                      : "text-muted-foreground"
+                              }`}
                             />
-                            <AvatarFallback>
-                              {student.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
+                            <Avatar>
+                              <AvatarImage
+                                src={student.avatar || "/placeholder.svg"}
+                              />
+                              <AvatarFallback>
+                                {student.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">
+                              {student.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Average: {student.averageMarks}%
+                            </p>
+                          </div>
+                          <Badge variant="secondary">#{index + 1}</Badge>
                         </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{student.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Average: {student.averageMarks}%
-                          </p>
-                        </div>
-                        <Badge variant="secondary">#{index + 1}</Badge>
-                      </div>
-                    ),
-                  )}
-                </div>
+                      ),
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Trophy className="h-16 w-16 mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-1">
+                      No performance data yet
+                    </h3>
+                    <p className="text-sm text-center">
+                      Add exam results to see top performing students
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -405,33 +453,45 @@ export default function DashboardStatistics({
                 <CardDescription>Latest feedback from students</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {stats.recentActivities.recentFeedbacks.map((feedback) => (
-                    <div
-                      key={feedback.id}
-                      className="border-b pb-4 last:border-0"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {feedback.studentName}
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {feedback.feedback}
-                          </p>
+                {hasRecentFeedbacks ? (
+                  <div className="space-y-4">
+                    {stats.recentActivities.recentFeedbacks.map((feedback) => (
+                      <div
+                        key={feedback.id}
+                        className="border-b pb-4 last:border-0"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">
+                              {feedback.studentName}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {feedback.feedback}
+                            </p>
+                          </div>
+                          {feedback.rating && (
+                            <Badge variant="outline">
+                              ⭐ {feedback.rating}/5
+                            </Badge>
+                          )}
                         </div>
-                        {feedback.rating && (
-                          <Badge variant="outline">
-                            ⭐ {feedback.rating}/5
-                          </Badge>
-                        )}
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {new Date(feedback.date).toLocaleDateString()}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">
-                        {new Date(feedback.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <MessageSquare className="h-16 w-16 mb-4 opacity-50" />
+                    <h3 className="text-lg font-medium mb-1">
+                      No feedback yet
+                    </h3>
+                    <p className="text-sm">
+                      Student feedback will be displayed here
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -448,30 +508,41 @@ export default function DashboardStatistics({
           <CardDescription>Your scheduled classes and routines</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {stats.upcomingClasses.slice(0, 5).map((routine) => (
-              <div
-                key={routine.id}
-                className="flex items-center justify-between border-b pb-3 last:border-0"
-              >
-                <div>
-                  <p className="font-medium">{routine.courseName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {routine.batchName}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {routine.schedule.slice(0, 2).map((sched, idx) => (
-                    <div key={idx} className="text-sm">
-                      <Badge variant="outline" className="mb-1">
-                        {sched.day}: {sched.startTime} - {sched.endTime}
-                      </Badge>
+          {hasUpcomingClasses ? (
+            <div className="space-y-3">
+              {stats.upcomingClasses.slice(0, 5).map((routine) => (
+                <div
+                  key={routine.id}
+                  className="flex items-center justify-between border-b pb-3 last:border-0"
+                >
+                  <div>
+                    <p className="font-medium">{routine.courseName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {routine.batchName}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex flex-col gap-1">
+                      {routine.schedule.map((scheduleItem, index) => (
+                        <Badge key={index} variant="outline">
+                          {scheduleItem.day}: {scheduleItem.startTime} -{" "}
+                          {scheduleItem.endTime}
+                        </Badge>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+              <CalendarX className="h-16 w-16 mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-1">No upcoming classes</h3>
+              <p className="text-sm">
+                Create routines to see your schedule here
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
