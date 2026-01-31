@@ -5,9 +5,15 @@ import { db } from "@/lib/prisma";
 import { DataTable } from "@/components/shared/data-table";
 import { routineColumns } from "@/data-columns/routines/routines-column";
 import { fetchBatches, fetchCourses } from "@/actions/fetch";
+import { auth } from "@/lib/auth";
 
-async function fetchRoutines() {
+async function fetchRoutines(teacherId: string) {
   const routines = await db.routine.findMany({
+    where: {
+      course: {
+        teacherId,
+      },
+    },
     select: {
       id: true,
       courseId: true,
@@ -44,10 +50,13 @@ async function fetchRoutines() {
 }
 
 export default async function RoutinePage() {
+  const session = await auth();
+  const teacherId = session?.user.id as string;
+
   const [courses, batches, routines] = await Promise.all([
     fetchCourses(),
     fetchBatches(),
-    fetchRoutines(),
+    fetchRoutines(teacherId),
   ]);
 
   return (

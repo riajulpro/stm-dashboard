@@ -13,8 +13,7 @@ import {
   IdCard,
 } from "lucide-react";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -23,15 +22,16 @@ const navigationLinks: { name: string; path: string; icon: LucideIcon }[] = [
   { name: "Batches", path: "/dashboard/batches", icon: IdCard },
   { name: "Students", path: "/dashboard/students", icon: Users },
   { name: "Courses", path: "/dashboard/courses", icon: GraduationCap },
+  { name: "Subscriptions", path: "/dashboard/subscriptions", icon: DollarSign },
   { name: "Routines", path: "/dashboard/routines", icon: Calendar },
   { name: "Attendance", path: "/dashboard/attendance", icon: CheckCircle },
   { name: "Results", path: "/dashboard/results", icon: BookOpen },
-  { name: "Subscriptions", path: "/dashboard/subscriptions", icon: DollarSign },
   { name: "Feedbacks", path: "/dashboard/feedbacks", icon: ChartAreaIcon },
 ];
 
 const DashboardNavigation = () => {
   const currentPathname = usePathname();
+  const router = useRouter();
 
   const isActive = (path: string) => {
     if (path === "/dashboard") {
@@ -42,19 +42,19 @@ const DashboardNavigation = () => {
   };
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 px-6">
       {navigationLinks.map(({ path, name, icon: Icon }) => (
-        <Link href={path} key={path}>
-          <Button
-            variant="ghost"
-            className={cn(
-              "w-full flex justify-start",
-              isActive(path) && "bg-slate-200 text-sky-700 font-semibold",
-            )}
-          >
-            <Icon size={22} /> {name}
-          </Button>
-        </Link>
+        <Button
+          key={path}
+          onClick={() => router.push(path)}
+          variant="ghost"
+          className={cn(
+            "w-full flex justify-start",
+            isActive(path) && "bg-slate-200 text-sky-700 font-semibold",
+          )}
+        >
+          <Icon size={22} /> {name}
+        </Button>
       ))}
     </div>
   );
