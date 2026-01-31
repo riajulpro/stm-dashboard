@@ -24,7 +24,7 @@ export function UserAvatar() {
           <Avatar>
             <AvatarImage src={session?.data?.user?.image || ""} alt="shadcn" />
 
-            <AvatarFallback className="bg-green-400">
+            <AvatarFallback className="bg-sky-700">
               {session?.data?.user?.name?.charAt(0)}
             </AvatarFallback>
           </Avatar>

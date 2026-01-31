@@ -18,7 +18,7 @@ export function MobileSidebar() {
           <TextAlignJustify />
         </Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent side="left">
         <SheetHeader>
           <Logo />
         </SheetHeader>
