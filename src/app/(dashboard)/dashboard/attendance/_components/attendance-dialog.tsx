@@ -1,18 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { DialogHeader } from "@/components/ui/dialog";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import {
   Form,
   FormControl,
@@ -23,41 +26,39 @@ import {
 } from "@/components/ui/form";
 
 import { Button } from "@/components/ui/button";
-import { useEffect, useState } from "react";
-import { CalendarIcon, Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, Loader2 } from "lucide-react";
+import { format } from "date-fns";
 import { api } from "@/lib/axios-instance";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-import { Calendar } from "@/components/ui/calendar";
+import { Student } from "@prisma/client";
+
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
 
-// Zod Schema
-const attendanceSchema = z.object({
-  studentId: z.string().min(1, "Student is required"),
-  date: z.date({
-    message: "Date is required",
-  }),
-  status: z.enum(["present", "absent", "late", "excused"], {
-    message: "Status is required",
-  }),
+// ---------------- SCHEMAS ----------------
+
+const createSchema = z.object({
+  studentIds: z.array(z.string()).min(1, "Select at least one student"),
+  date: z.date(),
+  status: z.enum(["present", "absent", "late", "excused"]),
   remarks: z.string().optional(),
 });
 
-type AttendanceFormValues = z.infer<typeof attendanceSchema>;
+const editSchema = z.object({
+  studentId: z.string(),
+  date: z.date(),
+  status: z.enum(["present", "absent", "late", "excused"]),
+  remarks: z.string().optional(),
+});
+
+type FormValues = z.infer<typeof createSchema> | z.infer<typeof editSchema>;
+
+// ---------------- TYPES ----------------
 
 interface Attendance {
   id: string;
@@ -65,306 +66,228 @@ interface Attendance {
   date: string | Date;
   status: string;
   remarks: string | null;
-  createdAt: string | Date;
-  updatedAt: string | Date;
-  student?: {
-    id: string;
-    studentId: string;
-    name: string;
-    email: string;
-    avatar: string | null;
-    batch: {
-      id: string;
-      batchName: string;
-      batchYear: string | null;
-    };
-  };
 }
 
 interface Props {
   children?: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  mode?: "edit" | "create";
+  mode?: "create" | "edit";
   attendance?: Attendance;
+  students?: Partial<Student>[];
 }
 
-const ATTENDANCE_STATUSES = [
-  { value: "present", label: "Present" },
-  { value: "absent", label: "Absent" },
-  { value: "late", label: "Late" },
-  { value: "excused", label: "Excused" },
-];
+// ---------------- CONSTANTS ----------------
 
-const AttendanceDialog = ({
+const STATUSES = ["present", "absent", "late", "excused"];
+
+// ---------------- COMPONENT ----------------
+
+export default function AttendanceDialog({
   children,
   open,
   onOpenChange,
   mode = "create",
   attendance,
-}: Props) => {
+  students,
+}: Props) {
   const [loading, setLoading] = useState(false);
-  const [students, setStudents] = useState<any[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
   const router = useRouter();
 
-  const form = useForm<AttendanceFormValues>({
-    resolver: zodResolver(attendanceSchema),
-    defaultValues: {
-      studentId: "",
-      date: new Date(),
-      status: "present",
-      remarks: "",
-    },
+  const form = useForm<FormValues>({
+    resolver: zodResolver(mode === "edit" ? editSchema : createSchema),
+    defaultValues:
+      mode === "edit"
+        ? {
+            studentId: "",
+            date: new Date(),
+            status: "present",
+            remarks: "",
+          }
+        : {
+            studentIds: [],
+            date: new Date(),
+            status: "present",
+            remarks: "",
+          },
   });
 
-  // Fetch students
-  useEffect(() => {
-    const fetchStudents = async () => {
-      try {
-        setLoadingData(true);
-        const response = await api.get("/students");
-        setStudents(response.data);
-      } catch (error) {
-        console.error("Error fetching students:", error);
-        toast.error("Failed to load students");
-      } finally {
-        setLoadingData(false);
-      }
-    };
-
-    if (open) {
-      fetchStudents();
-    }
-  }, [open]);
-
-  // Reset form when mode or attendance changes
   useEffect(() => {
     if (mode === "edit" && attendance) {
-      const attendanceDate =
-        attendance.date instanceof Date
-          ? attendance.date
-          : new Date(attendance.date);
-
       form.reset({
         studentId: attendance.studentId,
-        date: attendanceDate,
+        date:
+          attendance.date instanceof Date
+            ? attendance.date
+            : new Date(attendance.date),
         status: attendance.status as any,
         remarks: attendance.remarks || "",
-      });
-    } else {
-      form.reset({
-        studentId: "",
-        date: new Date(),
-        status: "present",
-        remarks: "",
       });
     }
   }, [mode, attendance, form]);
 
-  const onSubmit = async (data: AttendanceFormValues) => {
+  // ---------------- SUBMIT ----------------
+
+  const onSubmit = async (data: FormValues) => {
     setLoading(true);
     try {
-      // Format the date to ISO string for API
-      const formattedData = {
-        ...data,
-        date: data.date.toISOString(),
-        remarks: data.remarks || null,
-      };
-
       if (mode === "create") {
-        await api.post("/attendances", formattedData);
+        const createData = data as z.infer<typeof createSchema>;
+
+        await api.post("/attendances/bulk", {
+          studentIds: createData.studentIds,
+          date: createData.date.toISOString(),
+          status: createData.status,
+          remarks: createData.remarks || null,
+        });
+
         toast.success("Attendance recorded successfully");
-      } else if (mode === "edit" && attendance) {
-        await api.put("/attendances", {
+      }
+
+      if (mode === "edit" && attendance) {
+        const editData = data as z.infer<typeof editSchema>;
+        await api.patch("/attendances", {
           id: attendance.id,
-          ...formattedData,
+          studentId: editData.studentId,
+          date: editData.date.toISOString(),
+          status: editData.status,
+          remarks: editData.remarks || null,
         });
         toast.success("Attendance updated successfully");
       }
 
-      form.reset();
       onOpenChange(false);
       router.refresh();
-    } catch (error: any) {
-      console.error(error);
-      const errorMessage =
-        error?.response?.data?.error || "Failed to save attendance record";
-      toast.error(errorMessage);
+      form.reset();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || "Failed to save attendance");
     } finally {
       setLoading(false);
     }
   };
 
+  // ---------------- UI ----------------
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-125 max-h-[90vh] overflow-y-auto">
+
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === "edit" ? "Edit Attendance" : "Record Attendance"}
           </DialogTitle>
           <DialogDescription>
             {mode === "edit"
-              ? "Update attendance information"
-              : "Record student attendance for a specific date"}
+              ? "Update a single attendance record"
+              : "Record attendance for multiple students"}
           </DialogDescription>
         </DialogHeader>
 
-        {loadingData ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit(onSubmit)}
-              className="space-y-4 mt-4"
-            >
-              {/* Student Selection */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* STUDENTS */}
+            {mode === "create" ? (
               <FormField
                 control={form.control}
-                name="studentId"
+                name="studentIds"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Student *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={loading || mode === "edit"}
-                    >
+                    <FormLabel>Students *</FormLabel>
+                    <div className="border rounded-md p-3 space-y-2 max-h-56 overflow-y-auto">
+                      {students?.map((s) => (
+                        <label key={s.id} className="flex gap-2 items-center">
+                          <input
+                            type="checkbox"
+                            checked={field.value?.includes(s.id as string)}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.checked
+                                  ? [...field.value, s.id]
+                                  : field.value.filter((id) => id !== s.id),
+                              )
+                            }
+                          />
+                          {s.name} – {s.studentId}
+                        </label>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
+
+            {/* DATE */}
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date *</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a student" />
-                        </SelectTrigger>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between"
+                        >
+                          {format(field.value, "PPP")}
+                          <CalendarIcon className="h-4 w-4 opacity-50" />
+                        </Button>
                       </FormControl>
-                      <SelectContent>
-                        {students.map((student) => (
-                          <SelectItem key={student.id} value={student.id}>
-                            {student.name} - {student.studentId}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Date Selection */}
-              <FormField
-                control={form.control}
-                name="date"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date *</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground",
-                            )}
-                            disabled={loading}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) =>
-                            date > new Date() || date < new Date("1900-01-01")
-                          }
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Status Selection */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      disabled={loading}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ATTENDANCE_STATUSES.map((status) => (
-                          <SelectItem key={status.value} value={status.value}>
-                            {status.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Remarks */}
-              <FormField
-                control={form.control}
-                name="remarks"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Remarks (Optional)</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Add any notes or comments..."
-                        className="resize-none"
-                        {...field}
-                        disabled={loading}
+                    </PopoverTrigger>
+                    <PopoverContent>
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                    </PopoverContent>
+                  </Popover>
+                </FormItem>
+              )}
+            />
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {mode === "edit" ? "Update Attendance" : "Record Attendance"}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        )}
+            {/* STATUS */}
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status *</FormLabel>
+                  <select {...field} className="w-full border rounded p-2">
+                    {STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                </FormItem>
+              )}
+            />
+
+            {/* REMARKS */}
+            <FormField
+              control={form.control}
+              name="remarks"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Remarks</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" disabled={loading} className="w-full">
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {mode === "edit" ? "Update Attendance" : "Record Attendance"}
+            </Button>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );
-};
-
-export default AttendanceDialog;
+}

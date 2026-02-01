@@ -33,8 +33,11 @@ async function getCourses(teacherId: string) {
   });
 }
 
-async function getStudents() {
+async function getStudents(teacherId: string) {
   return await db.student.findMany({
+    where: {
+      teacherId,
+    },
     select: {
       id: true,
       name: true,
@@ -49,7 +52,7 @@ export default async function SubscriptionPage() {
   const [subscription, courses, students] = await Promise.all([
     getSubscriptions(teacherId!),
     getCourses(teacherId!),
-    getStudents(),
+    getStudents(teacherId!),
   ]);
 
   return (
